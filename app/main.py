@@ -1,18 +1,19 @@
 """
-Vocab AI Coach - FastAPI Application
-A microservice for vocabulary learning with AI-powered simplification
+Tech Vocab AI Coach - FastAPI Application
+Cloud-native microservice for learning technical concepts
 """
-
-from app.schemas import WordSuggestionRequest, WordSuggestion
-
 from fastapi import FastAPI
+from app.routers import terms
 
 # Create FastAPI application instance
 app = FastAPI(
-    title="Vocab AI Coach",
-    description="AI-powered vocabulary learning microservice",
+    title="Tech Vocab AI Coach",
+    description="Learn DevOps, Cloud, Backend, Networking, System Design, and Security",
     version="1.0.0"
 )
+
+# Register routers
+app.include_router(terms.router)
 
 
 @app.get("/")
@@ -33,18 +34,6 @@ async def health_check():
     Health check endpoint for monitoring
     """
     return {"status": "healthy"}
-
-@app.post("/api/v1/suggest")
-async def suggest_word(request: WordSuggestionRequest):
-    # For now, return a dummy word based on part_of_speech
-    # We'll add real logic later
-    return WordSuggestion(
-        word="serendipitous",
-        part_of_speech=request.part_of_speech,
-        difficulty=request.difficulty,
-        simple_definition="Happening by lucky accident",
-        example="Finding money in your pocket is serendipitous"
-    )
 
 
 
