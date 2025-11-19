@@ -1,227 +1,329 @@
-# Vocab AI Coach
+Tech Vocab AI Coach — Cloud-Native Learning Microservice
 
-A FastAPI backend microservice that simplifies difficult English words using dictionary APIs and AI language models.
+Tech Vocab AI Coach is a cloud-native FastAPI microservice that teaches DevOps, Cloud, Backend Engineering, Networking, System Design, and Cybersecurity concepts through:
 
-## Overview
+AI-simplified definitions
 
-Vocab AI Coach is a RESTful API service designed to help users expand their vocabulary by providing simplified definitions and contextual examples of complex English words. The service integrates with external dictionary APIs and AI language models to transform formal definitions into easily understandable explanations.
+AI-graded free-form explanations
 
-## Features
+Category-based quizzes
 
-- Fetch formal dictionary definitions from external APIs
-- Simplify complex definitions using AI language models
-- Generate contextual example sentences
-- Save user vocabulary for future reference and review
-- User-specific vocabulary tracking and management
-- RESTful API architecture
-- Docker containerization for easy deployment
+Correct model answers
 
-## Architecture
+Personal vocabulary tracking
 
-The service follows a microservice architecture pattern:
+Full AWS-backed architecture
 
-```
-Client Request
-    |
-    v
-FastAPI Application
-    |
-    +---> Dictionary API Service (External)
-    |
-    +---> AI Language Model Service (OpenAI/Anthropic)
-    |
-    +---> Database Layer (SQLite/PostgreSQL)
-    |
-    v
-JSON Response
-```
+It combines backend engineering, async Python, SQLAlchemy ORM, RDS PostgreSQL, JWT auth, Docker, GitHub Actions CI/CD, AWS ECS, S3, IAM, and CloudWatch into one cohesive production-level project.
 
-## Installation
+This is a real microservice — scalable, secure, and built using the same patterns companies use.
 
-### Prerequisites
+Features
+🔹 Technical Learning Engine
 
-- Python 3.9 or higher
-- pip package manager
-- Docker (optional, for containerized deployment)
-- API keys for dictionary and AI services
+Explain any technical term (DevOps, SWE, Security, System Design, Networking)
 
-### Local Development Setup
+AI-generated simplified definitions
 
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/Vocab-Coach.git
-cd Vocab-Coach
+Real-world engineering examples
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+“Why this matters in real jobs”
 
-# Install dependencies
-pip install -r requirements.txt
+Save vocabulary to a user’s account
 
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your API keys
+Track mastery via review counts and quiz scores
 
-# Run the application
-uvicorn app.main:app --reload
-```
+🔹 AI-Powered Quiz System
 
-The API will be available at `http://localhost:8000`
+User selects a category (DevOps, Networking, SWE, Security, System Design)
 
-## API Endpoints
+Service pulls a random term from RDS PostgreSQL
 
-### Define a Word
+User explains the concept in their own words
 
-```http
-POST /api/v1/define
-Content-Type: application/json
+AI compares user explanation to “ideal answer”
 
+Returns:
+
+score (0–100)
+
+strengths
+
+weaknesses
+
+correct answer
+
+Automatically saves weak terms to their account
+
+🔹 Backend Architecture
+
+FastAPI async endpoints
+
+SQLAlchemy ORM with relationship mappings
+
+JWT authentication & user scoping
+
+CRUD APIs for Users, Terms, Vocabulary, Quiz Attempts
+
+Background tasks for analytics + CloudWatch logs
+
+Redis caching of definitions + terms
+
+Type annotations everywhere
+
+🔹 Cloud & DevOps
+
+Docker containerization
+
+AWS ECS Fargate deployment
+
+AWS RDS PostgreSQL database
+
+AWS S3 for terms dataset
+
+AWS IAM roles (least privilege)
+
+AWS CloudWatch logs + metrics
+
+AWS CloudTrail auditing
+
+GitHub Actions CI/CD pipeline
+
+Optional Terraform for infrastructure-as-code
+
+Cloud Architecture
+                      Client (Web or Mobile)
+                                 |
+                                 v
+                     Application Load Balancer
+                                 |
+                                 v
+                         ECS Fargate Service
+                        (FastAPI Containers)
+                                 |
+        --------------------------------------------------------
+        |                                                      |
+        v                                                      v
+   RDS PostgreSQL                                      S3 (Terms Dataset)
+   - users                                              - terms.json
+   - terms                                              - category data
+   - quiz_attempts
+   - user_vocabulary
+                                 |
+                                 v
+                     Redis Cache (optional improvement)
+                                 |
+                                 v
+                   CloudWatch Logs & Custom Metrics
+                                 |
+                                 v
+                           CloudTrail Auditing
+
+
+This is a full production-grade microservice.
+
+Database Schema (RDS PostgreSQL)
+users
+field	type	notes
+id	PK	user id
+email	varchar	unique
+password_hash	text	JWT auth
+created_at	timestamp	
+terms
+field	type	notes
+id	PK	
+term	varchar	
+category	varchar	devops / networking / security / swe / system design
+formal_definition	text	
+simple_definition	text	
+created_at	timestamp	
+user_vocabulary
+field	type	notes
+id	PK	
+user_id	FK → users	
+term_id	FK → terms	
+saved_at	timestamp	
+review_count	int	
+last_score	int	
+quiz_attempts
+field	type	notes
+id	PK	
+user_id	FK	
+term_id	FK	
+user_answer	text	
+score	int	
+ai_feedback	text	
+correct_answer	text	
+attempted_at	timestamp	
+API Endpoints
+1. Explain a Term
+POST /api/v1/explain
 {
-  "word": "serendipity"
+  "term": "Load Balancer"
 }
-```
+
 
 Response:
-```json
-{
-  "word": "serendipity",
-  "formal_definition": "The occurrence and development of events by chance in a happy or beneficial way",
-  "simple_definition": "Finding something good by accident or luck",
-  "example": "Finding a $20 bill in your old jacket is pure serendipity",
-  "timestamp": "2025-11-18T12:00:00Z"
-}
-```
-
-### Save Vocabulary
-
-```http
-POST /api/v1/vocabulary
-Content-Type: application/json
 
 {
-  "user_id": "user123",
-  "word": "serendipity"
+  "term": "Load Balancer",
+  "formal_definition": "...",
+  "simple_definition": "...",
+  "examples": [...],
+  "why_it_matters": "...",
+  "timestamp": "2025-11-19T02:00:00Z"
 }
-```
 
-### Retrieve User Vocabulary
+2. Get a Quiz Question
+GET /api/v1/quiz/random?category=devops
 
-```http
+
+Response:
+
+{
+  "term_id": 42,
+  "term": "CI/CD",
+  "question": "Explain what CI/CD means."
+}
+
+3. Submit an Answer
+POST /api/v1/quiz/answer
+{
+  "term_id": 42,
+  "user_answer": "It's when code is automatically tested and deployed."
+}
+
+
+Response:
+
+{
+  "score": 78,
+  "feedback": "Good start... but missing details like staging environments, pipelines, and automated deployment triggers.",
+  "correct_answer": "CI/CD is ...",
+  "saved_to_vocabulary": true
+}
+
+4. User Vocabulary
 GET /api/v1/vocabulary/{user_id}
-```
 
-Response:
-```json
-{
-  "user_id": "user123",
-  "words": [
-    {
-      "word": "serendipity",
-      "saved_at": "2025-11-18T12:00:00Z",
-      "review_count": 0
-    }
-  ],
-  "total": 1
-}
-```
+5. Auth (JWT)
 
-## Project Structure
+POST /auth/register
 
-```
-Vocab-Coach/
+POST /auth/login
+
+Project Structure
+Tech-Vocab-Coach/
+│
 ├── app/
-│   ├── __init__.py
-│   ├── main.py              # Application entry point
-│   ├── models.py            # Database models
-│   ├── schemas.py           # Pydantic schemas
-│   ├── database.py          # Database configuration
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── cache.py
 │   ├── routers/
-│   │   ├── __init__.py
-│   │   ├── define.py        # Definition endpoints
-│   │   └── vocabulary.py    # Vocabulary management endpoints
+│   │   ├── explain.py
+│   │   ├── quiz.py
+│   │   ├── vocabulary.py
+│   │   └── auth.py
 │   └── services/
-│       ├── __init__.py
-│       ├── dictionary.py    # Dictionary API integration
-│       └── ai_service.py    # AI model integration
+│       ├── ai_service.py
+│       ├── aws_service.py
+│       ├── quiz_service.py
+│       └── logging_service.py
+│
+├── infra/
+│   └── terraform/
+│
 ├── tests/
-│   └── test_api.py
+│   ├── test_auth.py
+│   ├── test_quiz.py
+│   ├── test_explain.py
+│   └── test_vocabulary.py
+│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── .github/workflows/deploy.yml
 ├── .env.example
-├── .gitignore
-├── LICENSE
 └── README.md
-```
 
-## Technology Stack
+Local Setup
+git clone https://github.com/YOUR_USERNAME/Tech-Vocab-Coach.git
+cd Tech-Vocab-Coach
 
-- FastAPI - Web framework
-- SQLAlchemy - ORM
-- SQLite/PostgreSQL - Database
-- OpenAI API - AI language model
-- Pydantic - Data validation
-- Docker - Containerization
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
 
-## Configuration
+uvicorn app.main:app --reload
 
-Create a `.env` file in the project root:
 
-```env
-OPENAI_API_KEY=your_openai_api_key
-DICTIONARY_API_KEY=your_dictionary_api_key
-DATABASE_URL=sqlite:///./vocab.db
-API_PORT=8000
-LOG_LEVEL=INFO
-```
+Swagger UI:
 
-## Docker Deployment
+http://localhost:8000/docs
 
-```bash
-# Build the image
-docker build -t vocab-coach:latest .
+Docker
+docker build -t tech-vocab-coach .
+docker run -p 8000:8000 tech-vocab-coach
 
-# Run with docker-compose
-docker-compose up -d
+CI/CD — GitHub Actions
 
-# View logs
-docker-compose logs -f
-```
+Pipeline includes:
 
-## Testing
+Lint + test
 
-```bash
-# Run tests
-pytest
+Build Docker image
 
-# Run with coverage
-pytest --cov=app tests/
-```
+Push to Amazon ECR
 
-## API Documentation
+Deploy to ECS Fargate
 
-Once the application is running, access the interactive API documentation:
+YAML file included in .github/workflows/deploy.yml.
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+Environment Variables
+OPENAI_API_KEY=your_key
+JWT_SECRET=your_secret
 
-## Contributing
+POSTGRES_URL=postgresql://user:pass@host:5432/dbname
 
-Contributions are welcome. Please follow these steps:
+AWS_REGION=us-east-1
+S3_BUCKET=techvocab-terms
+CLOUDWATCH_LOG_GROUP=tech-vocab-logs
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+REDIS_URL=redis://localhost:6379
 
-## License
+Why This Project Matters
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project demonstrates mastery of:
 
-## Contact
+Backend engineering
 
-Project Repository: https://github.com/YOUR_USERNAME/Vocab-Coach
+Async Python
 
---Author: Naim Hossain
+Modern API frameworks (FastAPI)
+
+SQLAlchemy ORM modelling
+
+JWT auth
+
+Docker
+
+AWS ECS deployment
+
+RDS PostgreSQL
+
+IAM roles
+
+CloudWatch logging
+
+CI/CD pipelines
+
+AI integration
+
+Data modeling
+
+Full microservice architecture
+
+This is a top-tier portfolio project for DevOps, Backend, Cloud, or Security Engineering.
