@@ -1,7 +1,7 @@
 # Key SQLAlchemy imports you'll need:
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import Base  # This we already have
 
 class User(Base):
@@ -10,7 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class VocabularyItem(Base):
     __tablename__ = "vocabulary_items"
@@ -19,7 +19,7 @@ class VocabularyItem(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     term_id = Column(Integer, ForeignKey("terms.id"), nullable=False, index=True)  
     review_count = Column(Integer, default=0)    
-    saved_at = Column(DateTime, default=datetime.utcnow)
+    saved_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_score = Column(Integer, nullable=True)
 
 class Term(Base):
@@ -32,7 +32,7 @@ class Term(Base):
     example = Column(String, nullable=True)
     simple_definition = Column(String, nullable=False)
     why_it_matters = Column(String, nullable=True)  
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
@@ -44,5 +44,5 @@ class QuizAttempt(Base):
     score = Column(Integer, nullable=False)  # 0-100
     ai_feedback = Column(String, nullable=True)
     correct_answer = Column(String, nullable=True)
-    attempted_at = Column(DateTime, default=datetime.utcnow)
+    attempted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

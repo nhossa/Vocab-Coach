@@ -76,7 +76,7 @@ class QuizResult(BaseModel):
 
 
 # ============================================
-# VOCABULARY SCHEMAS
+# VOCABULARY SCHEMAS -  For USER PERSONAL LIST
 # ============================================
 
 class VocabularyItemResponse(BaseModel):
