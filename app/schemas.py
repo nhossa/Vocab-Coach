@@ -1,56 +1,92 @@
-from pydantic import BaseModel, Field
-from enum import Enum
+"""
+Pydantic Schemas - API Request/Response Models
+"""
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
+from typing import Optional, List
 
-class PartOfSpeech(Enum):
-    NOUN = "noun"
-    VERB = "verb"
-    ADJECTIVE = "adjective"
-    ADVERB = "adverb"
-    PRONOUN = "pronoun"
 
-class Difficulty(Enum):
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
-
+# ============================================
+# AUTH SCHEMAS
+# ============================================
 
 class UserRegister(BaseModel):
-    email: str
+    """User registration - input"""
+    email: EmailStr
+    password: str = Field(min_length=8)
+
+
+class UserLogin(BaseModel):
+    """User login - input"""
+    email: EmailStr
     password: str
 
-class WordRequest(BaseModel):
-    word: str = Field(min_length=1, max_length=50)
 
-class WordSuggestionRequest(BaseModel):
-    part_of_speech: PartOfSpeech
-    difficulty: Difficulty  # lowercase field name
+class Token(BaseModel):
+    """JWT token - output"""
+    access_token: str
+    token_type: str = "bearer"
 
-class WordDefinition(BaseModel):
-    word: str
+
+# ============================================
+# TERM SCHEMAS (Explain endpoint)
+# ============================================
+
+class TermRequest(BaseModel):
+    """Request to explain a term"""
+    term: str = Field(min_length=1, max_length=100)
+
+
+class TermResponse(BaseModel):
+    """Response with term explanation"""
+    term: str
     formal_definition: str
     simple_definition: str
-    example: str
+    examples: List[str]
+    why_it_matters: str
+    category: str
+    timestamp: datetime
 
 
-class VocabularySaveRequest(BaseModel):
-    user_id: str
-    word: str
+# ============================================
+# QUIZ SCHEMAS
+# ============================================
 
-class WordSuggestion(BaseModel):
-    word: str
-    part_of_speech: PartOfSpeech  # Use your Enum!
-    difficulty: Difficulty         # Use your Enum!
-    simple_definition: str
-    example: str
+class QuizQuestion(BaseModel):
+    """Random quiz question - output"""
+    term_id: int
+    term: str
 
-class VocabularyItem(BaseModel):
-    word: str
-    part_of_speech: PartOfSpeech
+
+class QuizAnswerRequest(BaseModel):
+    """User's answer submission - input"""
+    term_id: int
+    user_answer: str = Field(min_length=10)
+
+
+class QuizResult(BaseModel):
+    """Quiz result with AI feedback - output"""
+    score: int = Field(ge=0, le=100)  # Between 0-100
+    feedback: str
+    correct_answer: str
+    saved_to_vocabulary: bool
+
+
+# ============================================
+# VOCABULARY SCHEMAS
+# ============================================
+
+class VocabularyItemResponse(BaseModel):
+    """Single vocabulary item - output"""
+    id: int
+    term: str
+    category: str
     saved_at: datetime
-    review_count: int = 0
+    review_count: int
+    last_score: Optional[int]
+
 
 class VocabularyListResponse(BaseModel):
-    user_id: str  # ← The connection is here
-    words: list[VocabularyItem]  # ← List of items for this user
+    """User's full vocabulary list - output"""
+    items: List[VocabularyItemResponse]
     total: int

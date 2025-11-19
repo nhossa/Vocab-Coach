@@ -31,6 +31,7 @@ class Term(Base):
     formal_definition = Column(String, nullable=False)
     example = Column(String, nullable=True)
     simple_definition = Column(String, nullable=False)
+    why_it_matters = Column(String, nullable=True)  
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class QuizAttempt(Base):
