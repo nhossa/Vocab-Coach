@@ -25,7 +25,7 @@ async def get_vocabulary(
     Get all saved vocabulary items for user
     """
     # Get vocabulary items for current user only
-    vocab_items = db.query(VocabularyItem).join(Term).filter(
+    vocab_items = db.query(VocabularyItem).filter(
         VocabularyItem.user_id == current_user.id
     ).all()
     

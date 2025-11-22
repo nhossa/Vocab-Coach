@@ -17,10 +17,11 @@ class VocabularyItem(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    term_id = Column(Integer, ForeignKey("terms.id"), nullable=False, index=True)  
-    review_count = Column(Integer, default=0)    
+    term_id = Column(Integer, ForeignKey("terms.id"), nullable=False, index=True)
+    review_count = Column(Integer, default=0)
     saved_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_score = Column(Integer, nullable=True)
+    term = relationship("Term", backref="vocab_items")
 
 class Term(Base):
     __tablename__ = "terms"
