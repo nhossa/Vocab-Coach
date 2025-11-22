@@ -88,8 +88,25 @@ async def submit_answer(
     db.commit()
 
     
-    #If this term is weak for you you have to review
+
+    # If this term is weak for you, save to vocabulary (if not already saved)
+    from app.models import VocabularyItem
     saved_to_vocabulary = score < 70
+    if saved_to_vocabulary:
+        existing_vocab = db.query(VocabularyItem).filter(
+            VocabularyItem.user_id == current_user.id,
+            VocabularyItem.term_id == answer.term_id
+        ).first()
+        if not existing_vocab:
+            vocab_item = VocabularyItem(
+                user_id=current_user.id,
+                term_id=answer.term_id,
+                review_count=0,
+                saved_at=datetime.now(),
+                last_score=score
+            )
+            db.add(vocab_item)
+            db.commit()
 
 
     return QuizResult(

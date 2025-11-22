@@ -1,57 +1,31 @@
 """
 Add sample terms to database
 """
+
 from app.database import SessionLocal
 from app.models import Term
+from terms_data_200 import terms_data_200
 
 def seed_terms():
     """Add sample terms to database"""
     db = SessionLocal()
-    
-    terms_data = [
-        {
-            "term": "Docker",
-            "category": "devops",
-            "formal_definition": "An open platform for developing, shipping, and running applications using containerization.",
-            "simple_definition": "A tool that packages your app into a portable container.",
-            "example": "Run the same code on your laptop and production server.",
-            "why_it_matters": "Solves 'works on my machine' problem. Used by 99% of companies."
-        },
-        {
-            "term": "Load Balancer",
-            "category": "networking",
-            "formal_definition": "A device or software that distributes network traffic across multiple servers to ensure no single server is overwhelmed.",
-            "simple_definition": "A traffic cop for your servers - sends requests to different servers to balance the work.",
-            "example": "AWS Elastic Load Balancer distributes traffic across 10 EC2 instances.",
-            "why_it_matters": "Prevents server crashes during high traffic and enables horizontal scaling."
-        },
-        {
-            "term": "CI/CD",
-            "category": "devops",
-            "formal_definition": "Continuous Integration/Continuous Deployment - automated practices for testing and deploying code changes.",
-            "simple_definition": "Automatically test and deploy your code when you push to GitHub.",
-            "example": "GitHub Actions runs tests on every commit and deploys to production if tests pass.",
-            "why_it_matters": "Reduces manual errors, speeds up releases, and catches bugs early."
-        },
-        {
-            "term": "API",
-            "category": "backend",
-            "formal_definition": "Application Programming Interface - a set of rules and protocols for building and interacting with software applications.",
-            "simple_definition": "A menu of actions your software can perform that other software can request.",
-            "example": "GET /users/123 returns data about user 123 in JSON format.",
-            "why_it_matters": "Enables different systems to communicate - the backbone of modern web apps."
-        }
-    ]
+    terms_data = terms_data_200
     
     added_count = 0
     skipped_count = 0
     
+    seen_terms = set()
     for term_data in terms_data:
+        term_lower = term_data["term"].strip().lower()
+        if term_lower in seen_terms:
+            print(f"  Skipped '{term_data['term']}' - duplicate in input list")
+            skipped_count += 1
+            continue
+        seen_terms.add(term_lower)
         # Check if term already exists (case-insensitive)
         existing = db.query(Term).filter(Term.term.ilike(term_data["term"])).first()
-        
         if existing:
-            print(f"  Skipped '{term_data['term']}' - already exists")
+            print(f"  Skipped '{term_data['term']}' - already exists in DB")
             skipped_count += 1
         else:
             new_term = Term(**term_data)
