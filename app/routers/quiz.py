@@ -11,6 +11,8 @@ from app.schemas import QuizQuestion, QuizAnswerRequest, QuizResult
 from app.database import get_db
 from app.models import Term, QuizAttempt, User
 from app.auth.auth_bearer import get_current_user
+from app.services.ai_grader import grade_user_answer
+
 
 # Create router instance
 router = APIRouter(
@@ -61,29 +63,40 @@ async def submit_answer(
             detail=f"Term with id {answer.term_id} not found"
         )
     
-    # Placeholder score (will add AI grading later)
-    score = 50
-    feedback = "AI grading coming soon!"
-    saved = False
-    
+    ai_result = grade_user_answer(term.term, term.simple_definition, answer.user_answer)
+    print(f"DEBUG: AI grader result: {ai_result}")
+
+    if not ai_result or "score" not in ai_result or "feedback" not in ai_result:
+        raise HTTPException(
+            status_code=500,
+            detail="AI grader failed to return a valid score and feedback. Please check server logs."
+        )
+
+    score = ai_result.get("score")
+    ai_feedback = ai_result.get("feedback")
     # Save quiz attempt to database
     quiz_attempt = QuizAttempt(
         user_id=current_user.id,
         term_id=answer.term_id,
         user_answer=answer.user_answer,
         score=score,
-        ai_feedback=feedback,
+        ai_feedback=ai_feedback,
         correct_answer=term.simple_definition
     )
     
     db.add(quiz_attempt)
     db.commit()
+
     
+    #If this term is weak for you you have to review
+    saved_to_vocabulary = score < 70
+
+
     return QuizResult(
         term=term.term,
         score=score,
-        feedback=feedback,
+        feedback=ai_feedback,
         correct_answer=term.simple_definition,
         your_answer=answer.user_answer,
-        saved_to_vocabulary=saved
+        saved_to_vocabulary=saved_to_vocabulary
     )

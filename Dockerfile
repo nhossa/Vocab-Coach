@@ -3,7 +3,7 @@ FROM python:3.10-slim AS builder
 
 WORKDIR /app
 
-# Install system libs ONLY in builder
+# Install system libs ONLY in builder since some packages require system level compilers
 RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

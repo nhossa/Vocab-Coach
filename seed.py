@@ -51,16 +51,16 @@ def seed_terms():
         existing = db.query(Term).filter(Term.term.ilike(term_data["term"])).first()
         
         if existing:
-            print(f"⏭️  Skipped '{term_data['term']}' - already exists")
+            print(f"  Skipped '{term_data['term']}' - already exists")
             skipped_count += 1
         else:
             new_term = Term(**term_data)
             db.add(new_term)
             added_count += 1
-            print(f"✅ Added '{term_data['term']}'")
+            print(f"Added '{term_data['term']}'")
     
     db.commit()
-    print(f"\n📊 Summary: Added {added_count}, Skipped {skipped_count}")
+    print(f"\n Summary: Added {added_count}, Skipped {skipped_count}")
     db.close()
 
 
