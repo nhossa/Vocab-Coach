@@ -2,14 +2,32 @@
 Tech Vocab AI Coach - FastAPI Application
 Cloud-native microservice for learning technical concepts
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.database import Base, engine
 from app.routers import terms, quiz, vocabulary, auth
+from seed import seed_terms
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure database tables exist on startup
+    Base.metadata.create_all(bind=engine)
+    # Seed terms (idempotent: skips existing entries)
+    try:
+        seed_terms()
+    except Exception as exc:
+        # Do not block app startup if seeding fails
+        print(f"Warning: failed to seed terms: {exc}")
+    yield
+
 
 # Create FastAPI application instance
 app = FastAPI(
     title="Tech Vocab AI Coach",
     description="Learn DevOps, Cloud, Backend, Networking, System Design, and Security",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Register routers with common prefix

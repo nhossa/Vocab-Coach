@@ -90,3 +90,12 @@ GitHub Actions CI/CD pipeline
 Optional Terraform modules
 
 This project intentionally mirrors real microservices used in production environments.
+
+## Docker
+- Build locally: `docker build -t tech-vocab-ai-coach:local .`
+- Run locally: `docker run --rm -p 8000:8000 -e GEMINI_API_KEY=<your_key> -e SECRET_KEY=<jwt_secret> -e ALGORITHM=HS256 tech-vocab-ai-coach:local`
+- Pull and run (replace `<dockerhub-username>` with your account):  
+  `docker run --rm -p 8000:8000 -e GEMINI_API_KEY=<your_key> -e SECRET_KEY=<jwt_secret> -e ALGORITHM=HS256 <dockerhub-username>/tech-vocab-ai-coach:latest`
+- API docs: open `http://localhost:8000/docs`
+- Health check: `curl http://localhost:8000/health`
+- Database: tables are auto-created and terms are auto-seeded on startup using SQLite `./vocab.db` (volume mount if you want persistence across container restarts).
