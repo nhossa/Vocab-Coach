@@ -2,6 +2,7 @@
 Tech Vocab AI Coach - FastAPI Application
 Cloud-native microservice for learning technical concepts
 """
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.database import Base, engine
@@ -14,10 +15,16 @@ async def lifespan(app: FastAPI):
     # Ensure database tables exist on startup
     Base.metadata.create_all(bind=engine)
     # Seed terms (idempotent: skips existing entries)
+    exc = None
     try:
         seed_terms()
-    except Exception as exc:
+    except Exception as e:
         # Do not block app startup if seeding fails
+        exc = e
+    # Print correct port info
+    port = os.environ.get("MAPPED_PORT") or os.environ.get("PORT") or "8000"
+    print(f"🚀 App running! Visit http://localhost:{port}")
+    if exc:
         print(f"Warning: failed to seed terms: {exc}")
     yield
 

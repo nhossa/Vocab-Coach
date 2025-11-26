@@ -18,6 +18,10 @@ ENV/
 
 # IDEs
 .vscode/
+
+# Environment variable files
+.env
+.env.*
 .idea/
 *.swp
 *.swo
