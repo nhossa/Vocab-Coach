@@ -11,7 +11,7 @@ from app.schemas import QuizQuestion, QuizAnswerRequest, QuizResult
 from app.database import get_db
 from app.models import Term, QuizAttempt, User
 from app.auth.auth_bearer import get_current_user
-from app.services.ai_grader import grade_user_answer
+from app.services.ai_client import grade_user_answer
 from typing import Optional
 
 

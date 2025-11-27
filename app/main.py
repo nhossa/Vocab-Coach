@@ -9,24 +9,17 @@ from app.database import Base, engine
 from app.routers import terms, quiz, vocabulary, auth
 from seed import seed_terms
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure database tables exist on startup
+    # Startup: db
     Base.metadata.create_all(bind=engine)
-    # Seed terms (idempotent: skips existing entries)
-    exc = None
+    # Startup: seed initial terms (safe skip if exists)
     try:
         seed_terms()
-    except Exception as e:
-        # Do not block app startup if seeding fails
-        exc = e
-    # Print correct port info
-    port = os.environ.get("MAPPED_PORT") or os.environ.get("PORT") or "8000"
-    print(f"🚀 App running! Visit http://localhost:{port}")
-    if exc:
-        print(f"Warning: failed to seed terms: {exc}")
-    yield
+    except Exception:
+        pass  # don't block startup on seed errors
+    yield 
+
 
 
 # Create FastAPI application instance
