@@ -1,8 +1,10 @@
 """
 Authentication Router - Handles user registration and login
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.schemas import UserLogin, UserRegister
 from app.database import get_db
@@ -10,6 +12,8 @@ from app.models import User
 from app.auth.auth_handler import sign_jwt
 from app.auth.auth_utils import hash_password, verify_password
 
+# Create limiter instance
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(
     prefix="/auth",
@@ -18,7 +22,8 @@ router = APIRouter(
 
 
 @router.post("/login")
-async def login_user(user: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute", error_message="Too many login attempts. Please wait a minute and try again.")
+async def login_user(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     """
     Login user
     """

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StackTutor - Quiz</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark mb-4" style="background-color: #1a1a2e;">
+        <div class="container-fluid">
+            <a href="dashboard.html" class="navbar-brand">StackTutor</a>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Category Filter Card -->
+        <div class="row justify-content-center mb-3">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Select Category</h5>
+                        <div class="row">
+                            <div class="col-md-8 mb-2">
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">All Categories</option>
+                                    <option value="devops">DevOps</option>
+                                    <option value="docker-kubernetes">Docker & Kubernetes</option>
+                                    <option value="ci-cd">CI/CD</option>
+                                    <option value="terraform">Terraform</option>
+                                    <option value="ansible">Ansible</option>
+                                    <option value="aws">AWS</option>
+                                    <option value="azure">Azure</option>
+                                    <option value="networking">Networking</option>
+                                    <option value="security">Security</option>
+                                    <option value="databases">Databases</option>
+                                    <option value="system-design">System Design</option>
+                                    <option value="api-design">API Design</option>
+                                    <option value="git">Git</option>
+                                    <option value="linux">Linux</option>
+                                    <option value="cdn-caching">CDN & Caching</option>
+                                    <option value="agile-methodology">Agile</option>
+                                    <option value="swe">Software Engineering</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <button class="btn btn-primary w-100" onclick="loadNewQuestion()">
+                                    Apply Filter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Question Card -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card" id="questionCard">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Define this term:</h4>
+                        <div class="mb-2">
+                            <span class="badge bg-secondary" id="categoryBadge">-</span>
+                        </div>
+                        <h2 class="text-primary mb-4" id="termName">Loading...</h2>
+                        
+                        <div class="mb-3">
+                            <label for="userAnswer" class="form-label">Your Answer (minimum 10 characters)</label>
+                            <textarea 
+                                class="form-control" 
+                                id="userAnswer" 
+                                rows="5" 
+                                placeholder="Explain what this term means in your own words..."
+                                minlength="10"></textarea>
+                            <div class="form-text">Be specific and explain the key concepts.</div>
+                        </div>
+                        
+                        <button class="btn btn-primary w-100" id="submitBtn" onclick="submitAnswer()">
+                            Submit Answer
+                        </button>
+                        
+                        <button class="btn btn-secondary w-100 mt-2" onclick="loadNewQuestion()">
+                            Skip to Next Question
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Result Card (Hidden initially) -->
+                <div class="card mt-4" id="resultCard" style="display: none;">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Quiz Result</h4>
+                        
+                        <!-- Score Badge -->
+                        <div class="text-center mb-4">
+                            <h1 class="display-3" id="scoreDisplay">-</h1>
+                            <p class="text-muted">Your Score</p>
+                        </div>
+                        
+                        <!-- AI Feedback -->
+                        <div class="mb-3">
+                            <h5>AI Feedback:</h5>
+                            <div class="alert alert-info" id="aiFeedback">-</div>
+                        </div>
+                        
+                        <!-- Your Answer -->
+                        <div class="mb-3">
+                            <h5>Your Answer:</h5>
+                            <div class="p-3" style="background-color: #0f3460; border-radius: 5px;" id="yourAnswer">-</div>
+                        </div>
+                        
+                        <!-- Correct Answer -->
+                        <div class="mb-3">
+                            <h5>Expected Answer:</h5>
+                            <div class="p-3" style="background-color: #0f3460; border-radius: 5px;" id="correctAnswer">-</div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <button class="btn btn-success w-100 mb-2" onclick="loadNewQuestion()">
+                            Next Question
+                        </button>
+                        <button class="btn btn-outline-primary w-100" onclick="goToDashboard()">
+                            Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        let currentTermId = null;
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+
+        // Load a random quiz question or specific term
+        async function loadNewQuestion(specificTermId = null) {
+            try {
+                console.log('loadNewQuestion called with specificTermId:', specificTermId);
+                
+                // Reset UI
+                document.getElementById('questionCard').style.display = 'block';
+                document.getElementById('resultCard').style.display = 'none';
+                document.getElementById('userAnswer').value = '';
+                document.getElementById('termName').textContent = 'Loading...';
+                document.getElementById('categoryBadge').textContent = '-';
+                document.getElementById('submitBtn').disabled = true;
+
+                let url;
+                if (specificTermId) {
+                    // Load specific term for review
+                    url = `${config.API_URL}/terms/${specificTermId}`;
+                    console.log('Loading specific term from:', url);
+                } else {
+                    // Get selected category for random quiz
+                    const category = document.getElementById('categoryFilter').value;
+                    url = `${config.API_URL}/quiz/random`;
+                    
+                    // Add category filter if selected
+                    if (category) {
+                        url += `?category=${encodeURIComponent(category)}`;
+                    }
+                    console.log('Loading random question from:', url);
+                }
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Received term data:', data);
+                    
+                    // Handle both quiz format and term format
+                    currentTermId = data.term_id || data.id;
+                    console.log('Set currentTermId to:', currentTermId);
+                    
+                    document.getElementById('termName').textContent = data.term;
+                    document.getElementById('categoryBadge').textContent = data.category;
+                    document.getElementById('submitBtn').disabled = false;
+                } else {
+                    const error = await response.json();
+                    alert('Error loading question: ' + error.detail);
+                    goToDashboard();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error connecting to server');
+            }
+        }
+
+        // Submit answer
+        async function submitAnswer() {
+            const userAnswer = document.getElementById('userAnswer').value.trim();
+
+            if (userAnswer.length < 10) {
+                alert('Please provide a more detailed answer (at least 10 characters)');
+                return;
+            }
+
+            // Disable submit button
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch(`${config.API_URL}/quiz/answer`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        term_id: currentTermId,
+                        user_answer: userAnswer
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    displayResult(result);
+                } else {
+                    const error = await response.json();
+                    // Check if it's a rate limit error
+                    if (response.status === 429) {
+                        alert((error.error || error.detail || 'Rate limit exceeded. Please wait a moment.'));
+                    } else {
+                        alert('Error submitting answer: ' + error.detail);
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Answer';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error connecting to server');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Answer';
+            }
+        }
+
+        // Display quiz result
+        function displayResult(result) {
+            console.log('Quiz result:', result);  // Debug log
+            
+            // Hide question card, show result card
+            document.getElementById('questionCard').style.display = 'none';
+            document.getElementById('resultCard').style.display = 'block';
+
+            // Display score with color
+            const scoreElement = document.getElementById('scoreDisplay');
+            scoreElement.textContent = result.score + '%';
+            
+            if (result.score >= 80) {
+                scoreElement.className = 'display-3 text-success';
+            } else if (result.score >= 60) {
+                scoreElement.className = 'display-3 text-warning';
+            } else {
+                scoreElement.className = 'display-3 text-danger';
+            }
+
+            // Display feedback and answers
+            document.getElementById('aiFeedback').textContent = result.feedback || 'No feedback available';
+            document.getElementById('yourAnswer').textContent = result.your_answer || 'N/A';
+            document.getElementById('correctAnswer').textContent = result.correct_answer || 'Not available';
+
+            // Scroll to result
+            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Load first question on page load
+        // Check if there's a term_id in URL for reviewing a specific term
+        const urlParams = new URLSearchParams(window.location.search);
+        const reviewTermId = urlParams.get('term_id');
+        
+        console.log('URL params:', window.location.search);
+        console.log('Review term ID from URL:', reviewTermId);
+        
+        if (reviewTermId) {
+            console.log('Loading specific term:', parseInt(reviewTermId));
+            loadNewQuestion(parseInt(reviewTermId));
+        } else {
+            console.log('Loading random question');
+            loadNewQuestion();
+        }
+    </script>
+</body>
+</html>

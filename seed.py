@@ -12,9 +12,12 @@ from app.data.terms import ALL_TERMS
 def seed_terms():
     db = SessionLocal()
 
-    db.execute(text("TRUNCATE TABLE terms RESTART IDENTITY CASCADE;"))
-    db.commit()
-    print("Force-emptied terms table.")
+    # Check if terms already exist - don't truncate if they do!
+    existing_count = db.query(Term).count()
+    if existing_count > 0:
+        print(f"Terms table already has {existing_count} terms. Skipping seed.")
+        db.close()
+        return
 
     unique_terms = {}
     dup_count = 0

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StackTutor - My Vocabulary</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark mb-4" style="background-color: #1a1a2e;">
+        <div class="container-fluid">
+            <a href="dashboard.html" class="navbar-brand">StackTutor</a>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="mb-3">My Vocabulary</h2>
+                        <p class="text-muted">Track your learning progress and review saved terms</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary" id="totalTerms">0</h3>
+                        <p class="text-muted mb-0">Total Terms</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary" id="avgScore">-</h3>
+                        <p class="text-muted mb-0">Average Score</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary" id="masteredTerms">0</h3>
+                        <p class="text-muted mb-0">Mastered (80+)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vocabulary List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Saved Terms</h4>
+                        
+                        <!-- Loading State -->
+                        <div id="loading" class="text-center py-5">
+                            <p class="text-muted">Loading vocabulary...</p>
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div id="emptyState" class="text-center py-5" style="display: none;">
+                            <p class="text-muted mb-3">You haven't saved any terms yet!</p>
+                            <a href="quiz.html" class="btn btn-primary">Take Your First Quiz</a>
+                        </div>
+                        
+                        <!-- Vocabulary Items -->
+                        <div id="vocabularyList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        // Load vocabulary
+        async function loadVocabulary() {
+            try {
+                const response = await fetch(`${config.API_URL}/vocabulary/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayVocabulary(data);
+                } else {
+                    const error = await response.json();
+                    alert('Error loading vocabulary: ' + error.detail);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error connecting to server');
+            }
+        }
+
+        // Display vocabulary
+        function displayVocabulary(data) {
+            document.getElementById('loading').style.display = 'none';
+            
+            const items = data.items || [];
+            
+            // Update stats
+            document.getElementById('totalTerms').textContent = items.length;
+            
+            if (items.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+            
+            // Calculate stats
+            const scoredItems = items.filter(item => item.last_score !== null);
+            if (scoredItems.length > 0) {
+                const avgScore = Math.round(
+                    scoredItems.reduce((sum, item) => sum + item.last_score, 0) / scoredItems.length
+                );
+                document.getElementById('avgScore').textContent = avgScore + '%';
+                
+                const mastered = scoredItems.filter(item => item.last_score >= 80).length;
+                document.getElementById('masteredTerms').textContent = mastered;
+            } else {
+                document.getElementById('avgScore').textContent = 'N/A';
+                document.getElementById('masteredTerms').textContent = '0';
+            }
+            
+            // Display items
+            const listContainer = document.getElementById('vocabularyList');
+            listContainer.innerHTML = items.map(item => createVocabCard(item)).join('');
+        }
+
+        // Create vocabulary card HTML
+        function createVocabCard(item) {
+            const scoreClass = item.last_score >= 80 ? 'success' : 
+                              item.last_score >= 60 ? 'warning' : 
+                              item.last_score ? 'danger' : 'secondary';
+            
+            const scoreText = item.last_score !== null ? 
+                `<span class="badge bg-${scoreClass}">${item.last_score}%</span>` : 
+                '<span class="badge bg-secondary">Not Scored</span>';
+            
+            const cardId = `card-${item.id}`;
+            const detailsId = `details-${item.id}`;
+            
+            return `
+                <div class="card mb-3" style="background-color: #0f3460; border: 1px solid #4a90e2;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0" style="cursor: pointer;" onclick="toggleDetails('${detailsId}')">
+                                ${escapeHtml(item.term)} 
+                                <small class="text-primary">▼</small>
+                            </h5>
+                            ${scoreText}
+                        </div>
+                        <p class="card-text text-muted mb-2">
+                            <small>Category: ${escapeHtml(item.category)} | Difficulty: ${item.difficulty}/5</small>
+                        </p>
+                        <p class="card-text">${escapeHtml(item.simple_definition)}</p>
+                        
+                        <!-- Expandable Details -->
+                        <div id="${detailsId}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #4a90e2;">
+                            <div class="mb-3">
+                                <h6 class="text-primary">Formal Definition:</h6>
+                                <p>${escapeHtml(item.formal_definition)}</p>
+                            </div>
+                            ${item.example ? `
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Example:</h6>
+                                    <p>${escapeHtml(item.example)}</p>
+                                </div>
+                            ` : ''}
+                            ${item.why_it_matters ? `
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Why It Matters:</h6>
+                                    <p>${escapeHtml(item.why_it_matters)}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mt-3 d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Reviewed ${item.review_count} time(s) | 
+                                Last saved: ${formatDate(item.saved_at)}
+                            </small>
+                            <button class="btn btn-sm btn-primary" onclick="reviewTerm(${item.term_id}, '${escapeHtml(item.term)}')">
+                                Review Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Toggle details visibility
+        function toggleDetails(detailsId) {
+            const details = document.getElementById(detailsId);
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+            } else {
+                details.style.display = 'none';
+            }
+        }
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        }
+
+        // Review term - redirect to quiz page with specific term
+        function reviewTerm(termId, termName) {
+            // Redirect to quiz page with term_id parameter
+            window.location.href = `quiz.html?term_id=${termId}`;
+        }
+
+        // Load on page load
+        loadVocabulary();
+    </script>
+</body>
+</html>
