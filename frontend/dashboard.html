@@ -6,6 +6,7 @@
     <title>StackTutor - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet">
+    <script src="js/config.js"></script>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -33,25 +34,47 @@
         </div>
 
         <!-- Action Cards -->
-        <div class="row g-4">
+        <div class="row">
             <!-- Take Quiz Card -->
-            <div class="col-md-6">
+            <div class="col-md-6 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h4 class="card-title">Take a Quiz</h4>
-                        <p class="card-text">Test your knowledge with random tech terms and get AI feedback on your answers.</p>
+                        <p class="card-text">Test your knowledge with random tech terms and get AI feedback on answers.</p>
                         <a href="quiz.html" class="btn btn-primary w-100">Start Quiz</a>
                     </div>
                 </div>
             </div>
 
             <!-- View Vocabulary Card -->
-            <div class="col-md-6">
+            <div class="col-md-6 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h4 class="card-title">My Vocabulary</h4>
                         <p class="card-text">Review your saved terms and track your learning progress.</p>
-                        <a href="vocabulary.html" class="btn btn-primary w-100">View Vocabulary</a>
+                        <a href="vocabulary.html" class="btn btn-info w-100">View Vocabulary</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Browse Terms Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title">Browse All Terms</h4>
+                        <p class="card-text">Explore our complete database of technical terms by category.</p>
+                        <a href="browse.html" class="btn btn-success w-100">Browse Terms</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Suggest Term Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title">Suggest a Term</h4>
+                        <p class="card-text">Know a term we're missing? Suggest it and our AI will review it!</p>
+                        <a href="suggest.html" class="btn btn-warning w-100">Suggest Term</a>
                     </div>
                 </div>
             </div>
@@ -102,7 +125,7 @@
         async function loadStats() {
             try {
                 // Get vocabulary items
-                const vocabResponse = await fetch('http://localhost:8001/api/v1/vocabulary/', {
+                const vocabResponse = await fetch(`${config.API_URL}/vocabulary/`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

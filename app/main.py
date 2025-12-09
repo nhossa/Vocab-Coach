@@ -3,6 +3,7 @@ Tech Vocab AI Coach - FastAPI Application
 Cloud-native microservice for learning technical concepts
 """
 import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,12 @@ from app.database import Base, engine
 from app.routers import terms, quiz, vocabulary, auth
 from seed import seed_terms
 
+# Initialize logging (must be imported to trigger setup)
+import app.logging_config
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
+
 # Get environment setting
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
@@ -22,13 +29,20 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: db
+    logger.info("Application starting", extra={"environment": ENVIRONMENT})
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created/verified")
+    
     # Startup: seed initial terms (safe skip if exists)
     try:
         seed_terms()
-    except Exception:
-        pass  # don't block startup on seed errors
-    yield 
+        logger.info("Database seeded with initial terms")
+    except Exception as e:
+        logger.warning(f"Seed skipped: {str(e)}")
+    
+    logger.info("Application startup complete")
+    yield
+    logger.info("Application shutting down") 
 
 
 

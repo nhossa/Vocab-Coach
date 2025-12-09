@@ -6,6 +6,7 @@
     <title>StackTutor - Quiz</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet">
+    <script src="js/config.js"></script>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -150,9 +151,11 @@
             window.location.href = 'dashboard.html';
         }
 
-        // Load a random quiz question
-        async function loadNewQuestion() {
+        // Load a random quiz question or specific term
+        async function loadNewQuestion(specificTermId = null) {
             try {
+                console.log('loadNewQuestion called with specificTermId:', specificTermId);
+                
                 // Reset UI
                 document.getElementById('questionCard').style.display = 'block';
                 document.getElementById('resultCard').style.display = 'none';
@@ -161,13 +164,21 @@
                 document.getElementById('categoryBadge').textContent = '-';
                 document.getElementById('submitBtn').disabled = true;
 
-                // Get selected category
-                const category = document.getElementById('categoryFilter').value;
-                let url = 'http://localhost:8001/api/v1/quiz/random';
-                
-                // Add category filter if selected
-                if (category) {
-                    url += `?category=${encodeURIComponent(category)}`;
+                let url;
+                if (specificTermId) {
+                    // Load specific term for review
+                    url = `${config.API_URL}/terms/${specificTermId}`;
+                    console.log('Loading specific term from:', url);
+                } else {
+                    // Get selected category for random quiz
+                    const category = document.getElementById('categoryFilter').value;
+                    url = `${config.API_URL}/quiz/random`;
+                    
+                    // Add category filter if selected
+                    if (category) {
+                        url += `?category=${encodeURIComponent(category)}`;
+                    }
+                    console.log('Loading random question from:', url);
                 }
 
                 const response = await fetch(url, {
@@ -178,7 +189,12 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    currentTermId = data.term_id;
+                    console.log('Received term data:', data);
+                    
+                    // Handle both quiz format and term format
+                    currentTermId = data.term_id || data.id;
+                    console.log('Set currentTermId to:', currentTermId);
+                    
                     document.getElementById('termName').textContent = data.term;
                     document.getElementById('categoryBadge').textContent = data.category;
                     document.getElementById('submitBtn').disabled = false;
@@ -208,7 +224,7 @@
             submitBtn.textContent = 'Submitting...';
 
             try {
-                const response = await fetch('http://localhost:8001/api/v1/quiz/answer', {
+                const response = await fetch(`${config.API_URL}/quiz/answer`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -225,7 +241,12 @@
                     displayResult(result);
                 } else {
                     const error = await response.json();
-                    alert('Error submitting answer: ' + error.detail);
+                    // Check if it's a rate limit error
+                    if (response.status === 429) {
+                        alert((error.error || error.detail || 'Rate limit exceeded. Please wait a moment.'));
+                    } else {
+                        alert('Error submitting answer: ' + error.detail);
+                    }
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Answer';
                 }
@@ -239,6 +260,8 @@
 
         // Display quiz result
         function displayResult(result) {
+            console.log('Quiz result:', result);  // Debug log
+            
             // Hide question card, show result card
             document.getElementById('questionCard').style.display = 'none';
             document.getElementById('resultCard').style.display = 'block';
@@ -256,16 +279,29 @@
             }
 
             // Display feedback and answers
-            document.getElementById('aiFeedback').textContent = result.feedback;
-            document.getElementById('yourAnswer').textContent = result.your_answer;
-            document.getElementById('correctAnswer').textContent = result.correct_answer;
+            document.getElementById('aiFeedback').textContent = result.feedback || 'No feedback available';
+            document.getElementById('yourAnswer').textContent = result.your_answer || 'N/A';
+            document.getElementById('correctAnswer').textContent = result.correct_answer || 'Not available';
 
             // Scroll to result
             document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
         }
 
         // Load first question on page load
-        loadNewQuestion();
+        // Check if there's a term_id in URL for reviewing a specific term
+        const urlParams = new URLSearchParams(window.location.search);
+        const reviewTermId = urlParams.get('term_id');
+        
+        console.log('URL params:', window.location.search);
+        console.log('Review term ID from URL:', reviewTermId);
+        
+        if (reviewTermId) {
+            console.log('Loading specific term:', parseInt(reviewTermId));
+            loadNewQuestion(parseInt(reviewTermId));
+        } else {
+            console.log('Loading random question');
+            loadNewQuestion();
+        }
     </script>
 </body>
 </html>

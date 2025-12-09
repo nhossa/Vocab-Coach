@@ -22,7 +22,7 @@ router = APIRouter(
 
 
 @router.post("/login")
-@limiter.limit("5/minute")  # Maximum 5 login attempts per minute per IP
+@limiter.limit("5/minute", error_message="Too many login attempts. Please wait a minute and try again.")
 async def login_user(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     """
     Login user

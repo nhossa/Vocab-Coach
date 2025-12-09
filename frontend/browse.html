@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StackTutor - Browse Terms</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark mb-4" style="background-color: #1a1a2e;">
+        <div class="container-fluid">
+            <a href="dashboard.html" class="navbar-brand">StackTutor</a>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Header with Filter -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="mb-3">Browse All Terms</h2>
+                        <p class="text-muted mb-3">Explore our complete vocabulary database</p>
+                        
+                        <!-- Category Filter -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Filter by Category:</label>
+                                <select id="categoryFilter" class="form-select" onchange="filterTerms()">
+                                    <option value="">All Categories</option>
+                                    <option value="devops">DevOps</option>
+                                    <option value="docker-kubernetes">Docker & Kubernetes</option>
+                                    <option value="ci-cd">CI/CD</option>
+                                    <option value="terraform">Terraform</option>
+                                    <option value="ansible">Ansible</option>
+                                    <option value="aws">AWS</option>
+                                    <option value="azure">Azure</option>
+                                    <option value="networking">Networking</option>
+                                    <option value="security">Security</option>
+                                    <option value="databases">Databases</option>
+                                    <option value="system-design">System Design</option>
+                                    <option value="api-design">API Design</option>
+                                    <option value="git">Git</option>
+                                    <option value="linux">Linux</option>
+                                    <option value="cdn-caching">CDN & Caching</option>
+                                    <option value="agile-methodology">Agile</option>
+                                    <option value="swe">Software Engineering</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Search:</label>
+                                <input type="text" id="searchBox" class="form-control" placeholder="Search terms..." onkeyup="searchTerms()">
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <span id="termCount" class="badge bg-primary">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms List -->
+        <div id="termsList" class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        let allTerms = []; // Store all terms for client-side filtering
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        // Load all terms on page load
+        async function loadAllTerms() {
+            try {
+                const response = await fetch(`${config.API_URL}/terms/all`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    allTerms = await response.json();
+                    displayTerms(allTerms);
+                } else {
+                    document.getElementById('termsList').innerHTML = 
+                        '<div class="col-12"><div class="alert alert-danger">Error loading terms</div></div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('termsList').innerHTML = 
+                    '<div class="col-12"><div class="alert alert-danger">Error connecting to server</div></div>';
+            }
+        }
+
+        // Filter terms by category
+        function filterTerms() {
+            const category = document.getElementById('categoryFilter').value;
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            let filtered = allTerms;
+            
+            // Filter by category
+            if (category) {
+                filtered = filtered.filter(term => term.category === category);
+            }
+            
+            // Filter by search
+            if (searchTerm) {
+                filtered = filtered.filter(term => 
+                    term.term.toLowerCase().includes(searchTerm) ||
+                    term.simple_definition.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            displayTerms(filtered);
+        }
+
+        // Search terms
+        function searchTerms() {
+            filterTerms();
+        }
+
+        // Display terms
+        function displayTerms(terms) {
+            const container = document.getElementById('termsList');
+            document.getElementById('termCount').textContent = `${terms.length} terms`;
+            
+            if (terms.length === 0) {
+                container.innerHTML = '<div class="col-12"><div class="alert alert-info">No terms found</div></div>';
+                return;
+            }
+            
+            container.innerHTML = terms.map(term => createTermCard(term)).join('');
+        }
+
+        // Create term card
+        function createTermCard(term) {
+            const difficultyColor = term.difficulty <= 2 ? 'success' : term.difficulty <= 3 ? 'warning' : 'danger';
+            const detailsId = `details-${term.id}`;
+            
+            return `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100" style="background-color: #0f3460; border: 1px solid #4a90e2;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0" style="cursor: pointer;" onclick="toggleDetails('${detailsId}')">
+                                    ${escapeHtml(term.term)}
+                                    <small class="text-primary">▼</small>
+                                </h5>
+                                <span class="badge bg-${difficultyColor}">${term.difficulty}/5</span>
+                            </div>
+                            <p class="card-text text-muted mb-2">
+                                <small>${escapeHtml(term.category)}</small>
+                            </p>
+                            <p class="card-text">${escapeHtml(term.simple_definition)}</p>
+                            
+                            <!-- Expandable Details -->
+                            <div id="${detailsId}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #4a90e2;">
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Formal Definition:</h6>
+                                    <p>${escapeHtml(term.formal_definition)}</p>
+                                </div>
+                                ${term.example ? `
+                                    <div class="mb-3">
+                                        <h6 class="text-primary">Example:</h6>
+                                        <p>${escapeHtml(term.example)}</p>
+                                    </div>
+                                ` : ''}
+                                ${term.why_it_matters ? `
+                                    <div class="mb-3">
+                                        <h6 class="text-primary">Why It Matters:</h6>
+                                        <p>${escapeHtml(term.why_it_matters)}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle details visibility
+        function toggleDetails(detailsId) {
+            const details = document.getElementById(detailsId);
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+            } else {
+                details.style.display = 'none';
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load terms when page loads
+        loadTerms();
+    </script>
+</body>
+</html>

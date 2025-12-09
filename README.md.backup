@@ -1,0 +1,97 @@
+# 🎓 Vocab Coach — AI-Powered Technical Learning Platform
+
+> A production-ready full-stack application demonstrating modern DevOps practices, cloud architecture, and AI integration.
+
+**Live Demo:** *[Coming Soon - AWS Deployment]*
+
+Vocab Coach is a cloud-native microservice that helps engineers master technical vocabulary across DevOps, Cloud, Backend, Networking, System Design, and Security. Built as a portfolio project showcasing real-world production patterns and AWS cloud infrastructure.
+
+## 🎯 Project Highlights
+
+- **Full-Stack Application**: FastAPI backend + responsive vanilla JavaScript frontend
+- **AI Integration**: Google Gemini API for intelligent answer grading and term validation
+- **Production-Ready**: Docker containerization, environment-based configuration, structured logging
+- **Cloud Architecture**: Designed for AWS deployment (ECS, RDS, S3, CloudWatch)
+- **Security**: JWT authentication, rate limiting, input validation
+- **Database**: PostgreSQL with SQLAlchemy ORM, 322+ pre-seeded technical terms
+- **DevOps**: Infrastructure as Code ready, CI/CD pipeline prepared
+
+## Features
+### Technical Learning Engine
+
+Provide any technical term (DevOps, SWE, System Design, Network, Security).
+
+Returns a clean definition + simplified explanation.
+
+Includes real-world engineering examples.
+
+Stores terms to a user’s vocabulary list for spaced review.
+
+### AI-Powered Quizzing
+
+Users pick a category.
+
+Service selects a random term from PostgreSQL.
+
+User explains the concept in their own words.
+
+AI evaluates the explanation against the ideal answer:
+
+Score (0–100)
+
+Strengths
+
+Weak points
+
+Correct definition
+
+Weak terms are automatically saved for later review.
+
+## Backend Architecture
+
+FastAPI async endpoints
+
+SQLAlchemy ORM with relationships
+
+RDS PostgreSQL
+
+JWT authentication + user scoping
+
+CRUD endpoints for users, terms, vocabulary, quiz attempts
+
+Background tasks for analytics + CloudWatch metrics
+
+Optional Redis caching layer
+
+Clean separation of routers, services, and models
+
+Cloud & DevOps Stack
+
+Docker containerization
+
+ECS Fargate deployment
+
+RDS PostgreSQL
+
+S3 for term datasets
+
+IAM least-privilege roles
+
+CloudWatch logs + metrics
+
+CloudTrail auditing
+
+GitHub Actions CI/CD pipeline
+
+Optional Terraform modules
+
+This project intentionally mirrors real microservices used in production environments.
+
+## Docker
+- Build locally: `docker build -t tech-vocab-ai-coach:local .`
+- Run locally: `docker run --rm -p 8000:8000 -e GEMINI_API_KEY=<your_key> -e SECRET_KEY=<jwt_secret> -e ALGORITHM=HS256 tech-vocab-ai-coach:local`
+- Pull and run (replace `<dockerhub-username>` with your account):  
+  `docker run --rm -p 8000:8000 -e GEMINI_API_KEY=<your_key> -e SECRET_KEY=<jwt_secret> -e ALGORITHM=HS256 <dockerhub-username>/tech-vocab-ai-coach:latest`
+- API docs: open `http://localhost:8000/docs`
+- Health check: `curl http://localhost:8000/health`
+- Database: tables are auto-created and terms are auto-seeded on startup using SQLite `./vocab.db` (volume mount if you want persistence across container restarts).

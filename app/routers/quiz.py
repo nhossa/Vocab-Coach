@@ -2,10 +2,12 @@
 Quiz Router - Handles quiz generation and answer grading
 """
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from zoneinfo import ZoneInfo
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.schemas import QuizQuestion, QuizAnswerRequest, QuizResult
 from app.database import get_db
@@ -14,6 +16,8 @@ from app.auth.auth_bearer import get_current_user
 from app.services.ai_client import grade_user_answer
 from typing import Optional
 
+# Create limiter instance
+limiter = Limiter(key_func=get_remote_address)
 
 # Create router instance
 router = APIRouter(
@@ -53,7 +57,9 @@ async def get_random_quiz(
 
 
 @router.post("/answer", response_model=QuizResult)
+@limiter.limit("1/minute", error_message="Slow down! You can only submit 1 answer per minute. Take your time to learn.")
 async def submit_answer(
+    request: Request,
     answer: QuizAnswerRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -96,24 +102,32 @@ async def submit_answer(
 
     
 
-    # If this term is weak for you, save to vocabulary (if not already saved)
+    # Save to vocabulary or update existing
     from app.models import VocabularyItem
     saved_to_vocabulary = score < 70
-    if saved_to_vocabulary:
-        existing_vocab = db.query(VocabularyItem).filter(
-            VocabularyItem.user_id == current_user.id,
-            VocabularyItem.term_id == answer.term_id
-        ).first()
-        if not existing_vocab:
-            vocab_item = VocabularyItem(
-                user_id=current_user.id,
-                term_id=answer.term_id,
-                review_count=0,
-                saved_at=datetime.now(),
-                last_score=score
-            )
-            db.add(vocab_item)
-            db.commit()
+    
+    # Check if this term is already in user's vocabulary
+    existing_vocab = db.query(VocabularyItem).filter(
+        VocabularyItem.user_id == current_user.id,
+        VocabularyItem.term_id == answer.term_id
+    ).first()
+    
+    if existing_vocab:
+        # Update existing vocabulary item
+        existing_vocab.review_count += 1
+        existing_vocab.last_score = score
+        db.commit()
+    elif saved_to_vocabulary:
+        # Save new term to vocabulary if score is low
+        vocab_item = VocabularyItem(
+            user_id=current_user.id,
+            term_id=answer.term_id,
+            review_count=1,
+            saved_at=datetime.now(),
+            last_score=score
+        )
+        db.add(vocab_item)
+        db.commit()
 
 
     return QuizResult(

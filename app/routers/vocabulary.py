@@ -34,6 +34,7 @@ async def get_vocabulary(
     for item in vocab_items:
         items.append(VocabularyItemResponse(
             id=item.id,
+            term_id=item.term_id,
             term=item.term.term,
             formal_definition=item.term.formal_definition,
             simple_definition=item.term.simple_definition,

@@ -37,6 +37,11 @@ class TermRequest(BaseModel):
     term: str = Field(min_length=1, max_length=100)
 
 
+class TermSuggestRequest(BaseModel):
+    """Request to suggest a new term"""
+    term: str = Field(min_length=1, max_length=100)
+
+
 class TermResponse(BaseModel):
     """Response with term explanation"""
     id: int
@@ -49,6 +54,13 @@ class TermResponse(BaseModel):
     category_id: Optional[int] = None
     difficulty: int
     created_at: datetime
+
+
+class TermSuggestResponse(BaseModel):
+    """Response for term suggestion"""
+    approved: bool
+    reason: str
+    term_data: Optional[TermResponse] = None
 
 
 # ============================================
@@ -86,6 +98,7 @@ class QuizResult(BaseModel):
 class VocabularyItemResponse(BaseModel):
     """Single vocabulary item - output"""
     id: int
+    term_id: int
     term: str
     formal_definition: str
     simple_definition: str
