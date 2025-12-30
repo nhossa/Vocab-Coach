@@ -15,11 +15,11 @@ const config = {
             // Development - local Docker
             return 'http://localhost:8001/api/v1';
         } else {
-            // Production - AWS deployment
-            // TODO: Replace with your actual AWS URL after deployment
-            // Examples:
-            // - ALB: 'https://your-alb-url.us-east-1.elb.amazonaws.com/api/v1'
-            // - Domain: 'https://api.stacktutor.com/api/v1'
+            // Production - prefer same-origin API (works when UI and API share a domain)
+            if (window.location.origin && window.location.origin !== 'null') {
+                return `${window.location.origin.replace(/\/$/, '')}/api/v1`;
+            }
+            // Fallback: set your API origin explicitly
             return 'https://YOUR_AWS_URL_HERE/api/v1';
         }
     },

@@ -103,8 +103,10 @@
                     allTerms = await response.json();
                     displayTerms(allTerms);
                 } else {
+                    const errorText = await response.text();
+                    console.error('API Error:', response.status, errorText);
                     document.getElementById('termsList').innerHTML = 
-                        '<div class="col-12"><div class="alert alert-danger">Error loading terms</div></div>';
+                        `<div class="col-12"><div class="alert alert-danger">Error loading terms (${response.status}): ${errorText}</div></div>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -218,7 +220,7 @@
         }
 
         // Load terms when page loads
-        loadTerms();
+        loadAllTerms();
     </script>
 </body>
 </html>

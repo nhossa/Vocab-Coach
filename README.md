@@ -220,28 +220,381 @@ All protected endpoints require \`Authorization: Bearer <token>\` header.
 
 ---
 
-## 🌩️ AWS Deployment (Planned)
+## 🌩️ AWS Deployment
 
-This application is designed for production deployment on AWS Free Tier:
+This application is production-ready for AWS deployment. Here's the complete setup guide.
 
-### Infrastructure Components
-- **ECS (Elastic Container Service)** - Container orchestration on t2.micro EC2
-- **RDS PostgreSQL** - Managed database (t2.micro)
-- **S3** - Database backup storage
-- **Application Load Balancer** - Traffic distribution and SSL termination
-- **CloudWatch** - Logging and monitoring
-- **VPC** - Network isolation with public/private subnets
-- **IAM** - Least-privilege roles for services
-- **Security Groups** - Firewall rules
+### Prerequisites
+- AWS Account with Free Tier eligible t2.micro instances
+- AWS CLI configured with credentials
+- Docker and Docker Compose installed locally
+- GitHub repository set up for CI/CD
 
-### Deployment Steps (Coming Soon)
-1. Create RDS PostgreSQL instance
-2. Create S3 bucket for backups
-3. Build and push Docker image to ECR
-4. Create ECS cluster and task definition
-5. Deploy via GitHub Actions
-6. Configure ALB with health checks
-7. Update frontend config.js with production API URL
+### Step-by-Step AWS Deployment
+
+#### 1. Create RDS PostgreSQL Database
+```bash
+# Via AWS Console:
+# 1. Go to RDS → Create database
+# 2. Choose PostgreSQL 15
+# 3. Templates: Free tier
+# 4. Instance identifier: stacktutor-db
+# 5. Master username: vocabuser
+# 6. Auto-generate password (save to Secrets Manager)
+# 7. Connectivity: Public accessibility = Yes (for initial setup)
+# 8. Create database
+```
+
+#### 2. Create S3 Bucket for Backups
+```bash
+# Via AWS Console or CLI:
+aws s3 mb s3://stacktutor-backups-$(date +%s) --region us-east-1
+
+# Enable versioning for backup recovery
+aws s3api put-bucket-versioning \
+  --bucket stacktutor-backups-xxxxx \
+  --versioning-configuration Status=Enabled
+```
+
+#### 3. Create ECR Repository
+```bash
+# Push Docker image to Elastic Container Registry
+aws ecr create-repository --repository-name stacktutor --region us-east-1
+
+# Get login token and push image
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+docker build -t stacktutor .
+docker tag stacktutor:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/stacktutor:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/stacktutor:latest
+```
+
+#### 4. Create ECS Cluster
+```bash
+# Via AWS Console:
+# 1. ECS → Clusters → Create cluster
+# 2. Name: stacktutor-cluster
+# 3. Infrastructure: EC2 (t2.micro)
+# 4. Create
+```
+
+#### 5. Create ECS Task Definition
+```bash
+# Via AWS Console:
+# 1. ECS → Task definitions → Create new task definition
+# 2. Family: stacktutor-task
+# 3. Container name: stacktutor
+# 4. Image: <account-id>.dkr.ecr.us-east-1.amazonaws.com/stacktutor:latest
+# 5. Port mappings: 8001 → 8001
+# 6. Environment variables:
+#    - ENVIRONMENT=production
+#    - DATABASE_URL=postgresql://vocabuser:password@rds-endpoint:5432/vocabdb
+#    - GEMINI_API_KEY=<your-api-key>
+#    - SECRET_KEY=<your-secret>
+#    - AWS_REGION=us-east-1
+# 7. Create
+```
+
+#### 6. Create Application Load Balancer
+```bash
+# Via AWS Console:
+# 1. EC2 → Load Balancers → Create ALB
+# 2. Name: stacktutor-alb
+# 3. Scheme: Internet-facing
+# 4. Listeners: HTTP:80 → Target group
+# 5. Create target group:
+#    - Name: stacktutor-targets
+#    - Protocol: HTTP
+#    - Port: 8001
+#    - Health check path: /ready
+#    - Health check interval: 30 seconds
+# 6. Create
+```
+
+#### 7. Create ECS Service
+```bash
+# Via AWS Console:
+# 1. ECS → Clusters → stacktutor-cluster → Create service
+# 2. Task definition: stacktutor-task
+# 3. Service name: stacktutor-service
+# 4. Desired count: 1 (scale up later)
+# 5. Load balancing: ALB
+# 6. Target group: stacktutor-targets
+# 7. Health check grace period: 60 seconds
+# 8. Create service
+```
+
+#### 8. Run Initial Migrations
+```bash
+# Connect to RDS instance and run migrations:
+alembic upgrade head
+
+# Or via Docker:
+docker compose exec app alembic upgrade head
+```
+
+#### 9. Test Health Endpoints
+```bash
+# Get ALB DNS name from AWS Console
+curl http://<alb-dns-name>/health    # Should return 200
+curl http://<alb-dns-name>/alive     # Should return 200
+curl http://<alb-dns-name>/ready     # Should return 200
+```
+
+---
+
+## 📊 Monitoring & Logging
+
+### CloudWatch Logs
+Your application logs are automatically captured in CloudWatch:
+
+```bash
+# View logs via AWS CLI:
+aws logs tail /aws/ecs/stacktutor-cluster --follow
+
+# Logs appear in CloudWatch Console:
+# CloudWatch → Log groups → /ecs/stacktutor-task
+```
+
+### JSON Log Format (Production)
+All logs are structured JSON in production for easy querying:
+
+```json
+{
+  "timestamp": "2025-12-30 10:15:42,123",
+  "level": "INFO",
+  "logger": "app.main",
+  "message": "Application starting"
+}
+```
+
+### Health Check Monitoring
+Three endpoints for orchestration:
+- `/health` - General app health (Docker healthcheck)
+- `/alive` - Container is running (Kubernetes liveness probe)
+- `/ready` - Ready to handle traffic (ECS/K8s readiness probe)
+
+### CloudWatch Metrics & Alarms (ALB/ECS)
+Recommended basic alarms (no app code changes needed):
+
+```bash
+# 1) ALB 5XX alarm (triggers on any 5xx over 5 minutes)
+aws cloudwatch put-metric-alarm \
+   --alarm-name stacktutor-alb-5xx \
+   --namespace AWS/ApplicationELB \
+   --metric-name HTTPCode_ELB_5XX_Count \
+   --dimensions Name=LoadBalancer,Value=<alb-arn-suffix> \
+   --statistic Sum --period 60 --evaluation-periods 5 --threshold 1 \
+   --comparison-operator GreaterThanOrEqualToThreshold \
+   --treat-missing-data notBreaching \
+   --alarm-actions <sns-topic-arn>
+
+# 2) ALB latency (p95 > 2s for 5 minutes)
+aws cloudwatch put-metric-alarm \
+   --alarm-name stacktutor-alb-latency-p95 \
+   --namespace AWS/ApplicationELB \
+   --metric-name TargetResponseTime \
+   --dimensions Name=LoadBalancer,Value=<alb-arn-suffix> \
+   --statistic p95 --period 60 --evaluation-periods 5 --threshold 2 \
+   --comparison-operator GreaterThanThreshold \
+   --treat-missing-data notBreaching \
+   --alarm-actions <sns-topic-arn>
+
+# 3) ECS task CPU > 80% (5 minutes)
+aws cloudwatch put-metric-alarm \
+   --alarm-name stacktutor-ecs-cpu-high \
+   --namespace AWS/ECS \
+   --metric-name CPUUtilization \
+   --dimensions Name=ClusterName,Value=stacktutor-cluster Name=ServiceName,Value=stacktutor-service \
+   --statistic Average --period 60 --evaluation-periods 5 --threshold 80 \
+   --comparison-operator GreaterThanThreshold \
+   --treat-missing-data notBreaching \
+   --alarm-actions <sns-topic-arn>
+```
+
+- Replace `<alb-arn-suffix>` with the value after `app/` in your ALB ARN (see Console → EC2 → Load Balancers).
+- Replace `<sns-topic-arn>` with an SNS topic for alerts (email/SMS/Slack via webhook bridge).
+- For dashboards: create a CloudWatch Dashboard with widgets for `HTTPCode_ELB_5XX_Count`, `TargetResponseTime`, `RequestCount`, and ECS `CPUUtilization`.
+
+---
+
+## 🔐 Database Backup & Restore
+
+### Automated Backups
+```bash
+# Backup database to S3
+python backup_restore.py backup
+
+# This creates: stacktutor_db_20251230_101542.sql
+```
+
+### List Backups
+```bash
+python backup_restore.py list
+```
+
+### Restore from Backup
+```bash
+# Restore latest backup
+python backup_restore.py restore
+
+# Or specify a specific backup file
+python backup_restore.py restore stacktutor_db_20251230_101542.sql
+```
+
+---
+
+## 🚀 GitHub Actions CI/CD
+
+Automated testing and Docker build on every push to `main`:
+
+```yaml
+Workflow:
+1. Push to main branch
+2. GitHub Actions triggers
+3. Run pytest
+4. Build Docker image (multi-stage)
+5. Cache build layers for speed
+6. Ready to push to ECR (optional)
+```
+
+To add ECR push:
+```yaml
+# Add to .github/workflows/ci.yml:
+- name: Push to ECR
+  run: |
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+    docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/stacktutor:${{ github.sha }}
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Database Connection Issues
+```bash
+# Check if database is reachable
+psql $DATABASE_URL -c "SELECT 1"
+
+# If connection fails:
+# 1. Verify RDS security group allows port 5432 from your IP
+# 2. Check DATABASE_URL format: postgresql://user:pass@host:5432/dbname
+# 3. Ensure credentials are correct
+```
+
+### Health Checks Failing
+```bash
+# Check readiness endpoint
+curl -v http://localhost:8001/ready
+
+# If returns 503:
+# 1. Database may not be running
+# 2. Migrations not applied
+# 3. Missing environment variables
+```
+
+### Logs Not Appearing
+```bash
+# Check log level
+echo $LOG_LEVEL  # Should be INFO or DEBUG in production
+
+# Restart app with logging enabled
+docker compose up app --build
+
+# Check Docker stdout
+docker compose logs -f app
+```
+
+### API Returning 401 Unauthorized
+```bash
+# JWT token expired (30 min default)
+# Solution: Login again to get new token
+
+# Check SECRET_KEY is set
+echo $SECRET_KEY
+
+# Regenerate if lost:
+openssl rand -hex 32
+```
+
+### Rate Limiting Issues
+```bash
+# Default limits:
+# - Login: 5 requests per minute
+# - Quiz: 1 request per minute
+# - Suggestions: 1 request per minute
+
+# Wait 1 minute before retrying or check IP
+# Rate limit errors return 429 Too Many Requests
+```
+
+### Database Backup Fails
+```bash
+# Ensure AWS credentials are set
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+
+# Check S3 bucket exists
+aws s3 ls s3://stacktutor-backups-xxxxx
+
+# Manually backup with pg_dump
+pg_dump $DATABASE_URL > backup.sql
+```
+
+---
+
+## 📝 Running Migrations
+
+### Create New Migration
+```bash
+# After modifying app/models.py:
+alembic revision --autogenerate -m "Describe the change"
+
+# Review generated file in alembic/versions/
+
+# Apply migration
+alembic upgrade head
+```
+
+### Rollback Migration
+```bash
+# Rollback one step
+alembic downgrade -1
+
+# Rollback to specific revision
+alembic downgrade <revision_id>
+```
+
+See `MIGRATIONS.md` for detailed migration guide.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=app --cov-report=html
+
+# Run specific test file
+pytest tests/test_auth.py
+
+# Run in Docker
+docker compose exec app pytest -v
+```
+
+---
+
+## 📚 Additional Resources
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [AWS ECS Best Practices](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/best_practices.html)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Alembic Migrations](https://alembic.sqlalchemy.org/)
+- [Google Gemini API](https://ai.google.dev/)
 
 ---
 

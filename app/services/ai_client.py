@@ -1,7 +1,11 @@
 import os
 import json
+import logging
 from dotenv import load_dotenv
 import google.generativeai as genai
+
+# Module logger
+logger = logging.getLogger(__name__)
 
 def grade_user_answer(term: str, correct_definition: str, user_answer: str):
     """
@@ -18,7 +22,7 @@ def grade_user_answer(term: str, correct_definition: str, user_answer: str):
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("Error: GEMINI_API_KEY not found in environment variables.")
+        logger.error("GEMINI_API_KEY not found in environment variables.")
         return None
 
     genai.configure(api_key=api_key)
@@ -52,10 +56,10 @@ def grade_user_answer(term: str, correct_definition: str, user_answer: str):
         if "score" in result and "feedback" in result:
             return result
         else:
-            print("Error: AI response did not contain 'score' or 'feedback'.")
+            logger.error("AI response did not contain 'score' or 'feedback'.")
             return None
     except Exception as e:
-        print(f"An error occurred while calling the API or parsing the response: {e}")
+        logger.exception("An error occurred while calling the API or parsing the response")
         return None
 
 
@@ -83,7 +87,7 @@ def validate_and_generate_term(term: str, existing_terms: list):
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("Error: GEMINI_API_KEY not found in environment variables.")
+        logger.error("GEMINI_API_KEY not found in environment variables.")
         return None
 
     genai.configure(api_key=api_key)
@@ -150,11 +154,11 @@ def validate_and_generate_term(term: str, existing_terms: list):
         
         required_keys = ["approved", "reason"]
         if not all(key in result for key in required_keys):
-            print("Error: AI response missing required keys")
+            logger.error("AI response missing required keys")
             return None
             
         return result
     except Exception as e:
-        print(f"An error occurred while validating term: {e}")
+        logger.exception("An error occurred while validating term")
         return None
         

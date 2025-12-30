@@ -1,6 +1,7 @@
 """
 Quiz Router - Handles quiz generation and answer grading
 """
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -15,6 +16,9 @@ from app.models import Term, QuizAttempt, User
 from app.auth.auth_bearer import get_current_user
 from app.services.ai_client import grade_user_answer
 from typing import Optional
+
+# Module logger
+logger = logging.getLogger(__name__)
 
 # Create limiter instance
 limiter = Limiter(key_func=get_remote_address)
@@ -77,7 +81,7 @@ async def submit_answer(
         )
     
     ai_result = grade_user_answer(term.term, term.simple_definition, answer.user_answer)
-    print(f"DEBUG: AI grader result: {ai_result}")
+    logger.debug(f"AI grader result: {ai_result}")
 
     if not ai_result or "score" not in ai_result or "feedback" not in ai_result:
         raise HTTPException(
