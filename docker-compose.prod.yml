@@ -9,7 +9,7 @@ services:
       - "127.0.0.1:5432:5432"
 
   app:
-    build: .
+    image: ghcr.io/nhossanhossa/stacktutor:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
