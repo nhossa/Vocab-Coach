@@ -1,5 +1,5 @@
 """
-Tech Vocab AI Coach - FastAPI Application
+StackTutor - FastAPI Application
 Cloud-native microservice for learning technical concepts
 """
 import os
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application instance
 app = FastAPI(
-    title="Tech Vocab AI Coach",
+    title="StackTutor",
     description="Learn DevOps, Cloud, Backend, Networking, System Design, and Security",
     version="1.0.0",
     lifespan=lifespan,
